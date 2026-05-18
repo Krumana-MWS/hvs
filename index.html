@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th" data-bs-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบปักหมุดที่เยี่ยมบ้านนักเรียน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <!-- Loading Animation Overlay -->
+  <div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="text-center text-white">
+      <div class="spinner-border" role="status" style="width: 3rem; height: 3rem;"></div>
+      <div class="mt-2 fw-bold">กำลังประมวลผลข้อมูล...</div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#"><i class="bi bi-house-geo-fill me-2"></i>HomeVisit System</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <span class="nav-link active fw-bold text-white"><i class="bi bi-person-fill me-1"></i>ระบบลงทะเบียนปักหมุดที่อยู่สำหรับนักเรียน</span>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-sm btn-outline-light" id="darkModeToggle">
+            <i class="bi bi-moon-stars-fill"></i> โหมดมืด
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container my-4">
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <div class="card h-100 shadow-sm border-0">
+          <div class="card-header bg-success text-white py-3">
+            <h5 class="card-title mb-0 fw-bold"><i
+                class="bi bi-pencil-square me-2"></i>กรอกข้อมูลที่อยู่และปักหมุดบ้าน</h5>
+          </div>
+          <div class="card-body">
+            <form id="studentForm" class="needs-validation" novalidate>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">รหัสนักเรียน <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="studentId" required placeholder="เช่น 55432">
+                  <div id="studentIdWarning" class="form-text text-warning fw-semibold small d-none mt-1"></div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="fullName" required placeholder="เด็กชายสมชาย ดีใจ">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">ชั้น ม. <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="class" required placeholder="เช่น 3">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">ห้อง <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="room" required placeholder="เช่น 1">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">เลขที่ <span class="text-danger">*</span></label>
+                  <input type="number" class="form-control" id="number" required placeholder="เช่น 15">
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold">เบอร์โทรศัพท์ผู้ปกครอง <span
+                      class="text-danger">*</span></label>
+                  <input type="tel" class="form-control" id="parentPhone" required placeholder="เช่น 0812345678">
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold">ที่อยู่โดยละเอียด <span class="text-danger">*</span></label>
+                  <textarea class="form-control" id="address" rows="2" required
+                    placeholder="บ้านเลขที่ หมู่ ตรอก ซอย ถนน..."></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small">Latitude</label>
+                  <input type="text" class="form-control bg-light" id="latitude" readonly required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label text-muted small">Longitude</label>
+                  <input type="text" class="form-control bg-light" id="longitude" readonly required>
+                </div>
+              </div>
+              <div class="mt-4 d-grid gap-2">
+                <button type="button" class="btn btn-warning btn-lg fw-bold text-dark" id="btnCurrentLocation"><i
+                    class="bi bi-crosshair me-1"></i>ใช้พิกัดปัจจุบัน GPS</button>
+                <button type="submit" class="btn btn-success btn-lg fw-bold"><i
+                    class="bi bi-cloud-arrow-up-fill me-2"></i>ส่งข้อมูลพิกัดบ้าน</button>
+                <button type="button" class="btn btn-secondary" id="btnResetForm">ล้างข้อมูลฟอร์ม</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="card h-100 shadow-sm border-0 position-relative">
+          <div class="card-header bg-dark text-white py-3">
+            <h5 class="card-title mb-0 fw-bold"><i class="bi bi-map-fill me-2"></i>แผนที่ระบุพิกัด
+              (ลากหมุดเพื่อปรับตำแหน่งได้)</h5>
+          </div>
+          <div class="card-body p-0 position-relative">
+            <div class="map-search-box p-2 bg-white rounded shadow border d-flex gap-2">
+              <input type="text" id="mapSearchInput" class="form-control form-control-sm"
+                placeholder="ค้นหาสถานที่/หมู่บ้านใกล้เคียง...">
+              <button class="btn btn-sm btn-primary" id="btnMapSearch"><i class="bi bi-search"></i></button>
+            </div>
+            <div id="studentMap" style="height: 530px; width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Portal Linking Footer -->
+    <div class="text-center mt-5 pt-3 border-top border-light">
+      <a href="admin.html" class="text-muted text-decoration-none small hover-link-opacity"><i class="bi bi-shield-lock-fill me-1"></i>สำหรับคุณครูผู้ดูแลระบบ (Dashboard)</a>
+    </div>
+  </div>
+
+  <!-- Footer Section -->
+  <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+          <h5 class="fw-bold mb-1"><i class="bi bi-house-geo-fill me-2 text-warning"></i>HomeVisit System</h5>
+          <p class="small text-white-50 mb-0">ระบบลงทะเบียนและระบุพิกัดเยี่ยมบ้านนักเรียน มั่นคง ปลอดภัย และมีประสิทธิภาพ</p>
+        </div>
+        <div class="col-md-6 text-center text-md-end">
+          <span class="small text-white-50">© 2026 สงวนลิขสิทธิ์. พัฒนาขึ้นเพื่อสนับสนุนงานดูแลช่วยเหลือนักเรียน 🛡️</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast notifications -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive"
+      aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMessage">ข้อความแจ้งเตือน</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/student.js"></script>
+</body>
+
+</html>

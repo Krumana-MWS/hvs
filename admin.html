@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="th" data-bs-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการพิกัดเยี่ยมบ้าน - สำหรับคุณครู</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+    rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <!-- Loading Animation Overlay -->
+  <div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="text-center text-white">
+      <div class="spinner-border" role="status" style="width: 3rem; height: 3rem;"></div>
+      <div class="mt-2 fw-bold">กำลังประมวลผลข้อมูล...</div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="admin.html"><i class="bi bi-house-geo-fill me-2"></i>HomeVisit System - สำหรับคุณครู</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link fw-semibold" href="index.html"><i class="bi bi-person-bounding-box me-1"></i>ไปหน้าปักหมุดนักเรียน</a>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center gap-3">
+          <span id="adminSessionInfo" class="text-white small fw-bold d-none">
+            <i class="bi bi-person-circle me-1"></i>
+            สวัสดี, <span id="adminSessionName">คุณครู</span>
+            <button class="btn btn-sm btn-light ms-3 px-2 py-1 fw-bold text-primary border-0 rounded-3 shadow-sm" id="btnManageAdmins"
+              data-bs-toggle="modal" data-bs-target="#manageAdminsModal" onclick="loadAdminsList()"><i class="bi bi-people-fill me-1"></i>จัดการบัญชีครู</button>
+            <button class="btn btn-xs btn-outline-danger ms-2 px-2 py-0 border-0" id="btnNavbarLogout"
+              onclick="handleLogout()"
+              style="font-size: 0.75rem; background-color: rgba(220,53,69,0.2); color: #ff8585;">ออกจากระบบ</button>
+          </span>
+          <button class="btn btn-sm btn-outline-light" id="darkModeToggle">
+            <i class="bi bi-moon-stars-fill"></i> โหมดมืด
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+
+    <!-- ================= ส่วนหน้าจอเข้าสู่ระบบคุณครู (Teacher Login View) ================= -->
+    <div id="teacherLoginView" class="py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+          <div class="card shadow border-0 rounded-4 overflow-hidden bg-glass-card">
+            <div class="card-header bg-primary text-white text-center py-4 border-0">
+              <div class="login-icon-wrap mb-2">
+                <i class="bi bi-shield-lock-fill display-4"></i>
+              </div>
+              <h4 class="fw-bold mb-0">คุณครูเข้าสู่ระบบ</h4>
+              <p class="text-white-50 small mb-0 mt-1">กรุณายืนยันตัวตนเพื่อจัดการข้อมูลพิกัดและการเยี่ยมบ้าน</p>
+            </div>
+            <div class="card-body p-4 bg-white">
+              <form id="adminLoginForm" class="needs-validation" novalidate>
+                <div class="mb-3">
+                  <label class="form-label fw-bold"><i class="bi bi-person-fill me-1"></i>ชื่อผู้ใช้งาน (Username)</label>
+                  <input type="text" class="form-control form-control-lg rounded-3" id="adminUsername" required
+                    placeholder="เช่น admin">
+                  <div class="invalid-feedback">กรุณากรอกชื่อผู้ใช้งาน</div>
+                </div>
+                <div class="mb-4">
+                  <label class="form-label fw-bold"><i class="bi-key-fill me-1"></i>รหัสผ่าน (Password)</label>
+                  <input type="password" class="form-control form-control-lg rounded-3" id="adminPassword" required
+                    placeholder="รหัสผ่านผู้ดูแลระบบ">
+                  <div class="invalid-feedback">กรุณากรอกรหัสผ่าน</div>
+                </div>
+                <div class="d-grid mb-2">
+                  <button type="submit" class="btn btn-primary btn-lg fw-bold rounded-3 py-2 shadow-sm"><i
+                      class="bi bi-box-arrow-in-right me-2"></i>เข้าสู่ระบบบอร์ดครู</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ส่วนหน้าจอ Dashboard จัดการข้อมูล (แสดงเมื่อล็อกอินสำเร็จ) ================= -->
+    <div id="teacherDashboardView" class="d-none">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card text-white bg-primary shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center py-4">
+              <div>
+                <h6 class="text-uppercase fw-semibold mb-1 text-white-50">นักเรียนที่ส่งพิกัดแล้ว</h6>
+                <h2 class="display-5 fw-bold mb-0" id="countRegistered">0</h2>
+              </div>
+              <i class="bi bi-people-fill display-4 text-white-50"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card text-white bg-warning shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center py-4">
+              <div>
+                <h6 class="text-uppercase fw-semibold mb-1 text-black-50">รอดำเนินการเยี่ยมบ้าน</h6>
+                <h2 class="display-5 fw-bold mb-0 text-dark" id="countPending">0</h2>
+              </div>
+              <i class="bi bi-clock-history display-4 text-black-50"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card text-white bg-success shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center py-4">
+              <div>
+                <h6 class="text-uppercase fw-semibold mb-1 text-white-50">เยี่ยมบ้านสำเร็จแล้ว</h6>
+                <h2 class="display-5 fw-bold mb-0" id="countVisited">0</h2>
+              </div>
+              <i class="bi bi-check-circle-fill display-4 text-white-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white py-3">
+              <h5 class="card-title mb-0 fw-bold"><i
+                  class="bi bi-globe-asia-australia me-2"></i>แผนที่รวมพิกัดบ้านนักเรียนทั้งหมด</h5>
+            </div>
+            <div class="card-body p-0">
+              <div id="adminMap" style="height: 400px; width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+              <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-table me-2"></i>ตารางรายชื่อและสถานะการเยี่ยมบ้าน</h5>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-success fw-semibold" onclick="exportToExcel()"><i
+                    class="bi bi-file-earmark-excel-fill me-1"></i>ส่งออก Excel</button>
+                <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="window.print()"><i
+                    class="bi bi-file-earmark-pdf-fill me-1"></i>พิมพ์รายงาน PDF</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                  <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="tableSearchInput" class="form-control"
+                      placeholder="ค้นหา รหัส, ชื่อ, เบอร์โทร...">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <select id="filterClass" class="form-select">
+                    <option value="">-- ระดับชั้น --</option>
+                  </select>
+                </div>
+                <div class="col-md-1">
+                  <select id="filterRoom" class="form-select">
+                    <option value="">-- ห้อง --</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select id="filterStatus" class="form-select">
+                    <option value="">-- สถานะการเยี่ยม --</option>
+                    <option value="ยังไม่ได้เยี่ยม">ยังไม่ได้เยี่ยม</option>
+                    <option value="เยี่ยมเรียบร้อยแล้ว">เยี่ยมเรียบร้อยแล้ว</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select id="filterDeleteStatus" class="form-select fw-semibold border-secondary">
+                    <option value="active" selected>📋 นักเรียนปกติ</option>
+                    <option value="deleted">🗑️ ถังขยะ (ที่ลบแล้ว)</option>
+                  </select>
+                </div>
+                <div class="col-md-2 d-grid">
+                  <button class="btn btn-primary" onclick="loadTeacherDashboard()"><i
+                      class="bi bi-arrow-clockwise"></i> รีเฟรช</button>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle border" id="studentTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>รหัสนักเรียน</th>
+                      <th>ชื่อ-สกุล</th>
+                      <th>ชั้น/ห้อง/เลขที่</th>
+                      <th>เบอร์ผู้ปกครอง</th>
+                      <th>ที่อยู่</th>
+                      <th>สถานะการเยี่ยม</th>
+                      <th class="text-center">เครื่องมือการทำงาน</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentTableBody">
+                    <tr>
+                      <td colspan="7" class="text-center text-muted py-4">กำลังดึงข้อมูล...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- ระบบแบ่งหน้าตาราง (Pagination Controls Container) -->
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
+                <div class="small text-muted fw-semibold" id="paginationInfo">
+                  แสดงข้อมูล 0 ถึง 0 จากทั้งหมด 0 รายการ
+                </div>
+                <nav aria-label="Student list table page navigation">
+                  <ul class="pagination pagination-sm mb-0" id="tablePagination">
+                    <!-- จะถูกป้อนข้อมูลแบบ Dynamic ผ่าน JavaScript -->
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer Section -->
+  <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+          <h5 class="fw-bold mb-1"><i class="bi bi-house-geo-fill me-2 text-warning"></i>HomeVisit System</h5>
+          <p class="small text-white-50 mb-0">ระบบลงทะเบียนและระบุพิกัดเยี่ยมบ้านนักเรียน มั่นคง ปลอดภัย และมีประสิทธิภาพ</p>
+        </div>
+        <div class="col-md-6 text-center text-md-end">
+          <span class="small text-white-50">© 2026 สงวนลิขสิทธิ์. พัฒนาขึ้นเพื่อสนับสนุนงานดูแลช่วยเหลือนักเรียน 🛡️</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal จัดการบัญชีคุณครู -->
+  <div class="modal fade" id="manageAdminsModal" tabindex="-1" aria-labelledby="manageAdminsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-dark text-white rounded-top-4 py-3">
+          <h5 class="modal-title fw-bold" id="manageAdminsModalLabel"><i class="bi bi-people-fill me-2 text-warning"></i>จัดการบัญชีคุณครูผู้ดูแลระบบ</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-4">
+            <!-- ฟอร์มเพิ่มครูรายใหม่ -->
+            <div class="col-md-5 border-end">
+              <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-plus-fill me-1"></i>เพิ่มบัญชีคุณครูคนใหม่</h6>
+              <form id="addAdminForm" class="needs-validation" novalidate>
+                <div class="mb-3">
+                  <label class="form-label small fw-bold">ชื่อผู้ใช้งาน (Username) <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="newUsername" required placeholder="เช่น mana">
+                  <div class="invalid-feedback">กรุณากรอกชื่อผู้ใช้งาน</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-bold">รหัสผ่าน (Password) <span class="text-danger">*</span></label>
+                  <input type="password" class="form-control form-control-sm" id="newPassword" required placeholder="รหัสผ่านเข้าใช้งาน">
+                  <div class="invalid-feedback">กรุณากรอกรหัสผ่าน</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-bold">ชื่อ-นามสกุลจริง <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="newFullName" required placeholder="เช่น ครูมานะ ขยันสอน">
+                  <div class="invalid-feedback">กรุณากรอกชื่อ-นามสกุลจริง</div>
+                </div>
+                <div class="d-grid mt-3">
+                  <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-plus-circle-fill me-1"></i>บันทึกบัญชีครูใหม่</button>
+                </div>
+              </form>
+            </div>
+            
+            <!-- รายชื่อครูที่มีสิทธิ์ -->
+            <div class="col-md-7">
+              <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-list-stars me-1"></i>บัญชีที่มีสิทธิ์เข้าใช้งานปัจจุบัน</h6>
+              <div class="table-responsive" style="max-height: 250px;">
+                <table class="table table-sm table-hover border align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Username</th>
+                      <th>ชื่อ-นามสกุล</th>
+                      <th>เข้าใช้ล่าสุด</th>
+                      <th class="text-center">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminsTableBody">
+                    <tr>
+                      <td colspan="4" class="text-center text-muted py-3">กำลังดึงรายชื่อแอดมิน...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal แก้ไขข้อมูลนักเรียน -->
+  <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-header bg-warning text-dark rounded-top-4 py-3">
+          <h5 class="modal-title fw-bold" id="editStudentModalLabel"><i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูลประวัตินักเรียน</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editStudentForm" class="needs-validation" novalidate>
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">รหัสนักเรียน</label>
+                <input type="text" class="form-control bg-light" id="editStudentId" readonly required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="editFullName" required>
+                <div class="invalid-feedback">กรุณากรอกชื่อ-นามสกุล</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">ชั้น ม. <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="editClass" required>
+                <div class="invalid-feedback">กรุณากรอกระดับชั้น</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">ห้อง <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="editRoom" required>
+                <div class="invalid-feedback">กรุณากรอกห้องเรียน</div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">เลขที่ <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="editNumber" required>
+                <div class="invalid-feedback">กรุณากรอกเลขที่</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">เบอร์โทรศัพท์ผู้ปกครอง <span class="text-danger">*</span></label>
+                <input type="tel" class="form-control" id="editParentPhone" required>
+                <div class="invalid-feedback">กรุณากรอกเบอร์ผู้ปกครอง</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">ที่อยู่โดยละเอียด <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="editAddress" rows="2" required></textarea>
+                <div class="invalid-feedback">กรุณากรอกที่อยู่</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Latitude <span class="text-danger">*</span></label>
+                <input type="number" step="any" class="form-control" id="editLatitude" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Longitude <span class="text-danger">*</span></label>
+                <input type="number" step="any" class="form-control" id="editLongitude" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">สถานะการเยี่ยมบ้าน</label>
+                <select id="editVisitStatus" class="form-select">
+                  <option value="ยังไม่ได้เยี่ยม">ยังไม่ได้เยี่ยม</option>
+                  <option value="เยี่ยมเรียบร้อยแล้ว">เยี่ยมเรียบร้อยแล้ว</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 p-3 bg-light rounded-bottom-4">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+            <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>บันทึกการแก้ไข</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive"
+      aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMessage">ข้อความแจ้งเตือน</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+          aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+
+</html>
